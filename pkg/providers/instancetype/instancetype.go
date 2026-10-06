@@ -69,6 +69,7 @@ type NodeClass interface {
 	BlockDeviceMappingOverrides() []v1.BlockDeviceMappingOverride
 	CapacityReservations() []v1.CapacityReservation
 	CPUOptions() *v1.CPUOptions
+	EnclaveOptions() *v1.EnclaveOptions
 	InstanceStorePolicy() *v1.InstanceStorePolicy
 	NetworkInterfaces() []*v1.NetworkInterface
 	KubeletConfiguration() v1.KubeletConfiguration

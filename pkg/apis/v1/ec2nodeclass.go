@@ -165,6 +165,12 @@ type EC2NodeClassSpec struct {
 	// +kubebuilder:default={"httpEndpoint":"enabled","httpProtocolIPv6":"disabled","httpPutResponseHopLimit":1,"httpTokens":"required"}
 	// +optional
 	MetadataOptions *MetadataOptions `json:"metadataOptions,omitempty"`
+	// EnclaveOptions specifies whether the instance is enabled for Amazon Web Services Nitro Enclaves.
+	// When enabled, instance types are restricted to those that support Nitro Enclaves.
+	// When enclaveOptions is omitted or enabled is false, Nitro Enclaves are disabled.
+	// When enclaveOptions is specified, enabled is required.
+	// +optional
+	EnclaveOptions *EnclaveOptions `json:"enclaveOptions,omitempty"`
 
 	// ConnectionTracking configures idle connection tracking timeouts for
 	// ENIs Karpenter provisions in the launch template. EFA-only interfaces
@@ -499,6 +505,12 @@ type BlockDevice struct {
 	VolumeType *string `json:"volumeType,omitempty"`
 }
 
+type EnclaveOptions struct {
+	// Enabled indicates whether the instance is enabled for Amazon Web Services Nitro Enclaves.
+	// +required
+	Enabled bool `json:"enabled"`
+}
+
 // InstanceStorePolicy enumerates options for configuring instance store disks.
 // +kubebuilder:validation:Enum={RAID0}
 type InstanceStorePolicy string
@@ -656,6 +668,10 @@ func (in *EC2NodeClass) KubeletConfiguration() KubeletConfiguration {
 
 func (in *EC2NodeClass) CPUOptions() *CPUOptions {
 	return in.Spec.CPUOptions
+}
+
+func (in *EC2NodeClass) EnclaveOptions() *EnclaveOptions {
+	return in.Spec.EnclaveOptions
 }
 
 // AMIFamily returns the family for a NodePool based on the following items, in order of precdence:

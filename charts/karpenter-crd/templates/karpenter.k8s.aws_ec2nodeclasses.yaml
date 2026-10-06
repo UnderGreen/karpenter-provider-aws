@@ -543,6 +543,19 @@ spec:
                 detailedMonitoring:
                   description: DetailedMonitoring controls if detailed monitoring is enabled for instances that are launched
                   type: boolean
+                enclaveOptions:
+                  description: |-
+                    EnclaveOptions specifies whether the instance is enabled for Amazon Web Services Nitro Enclaves.
+                    When enabled, instance types are restricted to those that support Nitro Enclaves.
+                    When enclaveOptions is omitted or enabled is false, Nitro Enclaves are disabled.
+                    When enclaveOptions is specified, enabled is required.
+                  properties:
+                    enabled:
+                      description: Enabled indicates whether the instance is enabled for Amazon Web Services Nitro Enclaves.
+                      type: boolean
+                  required:
+                    - enabled
+                  type: object
                 instanceProfile:
                   description: |-
                     InstanceProfile is the AWS entity that instances use.

@@ -1257,10 +1257,8 @@ var _ = Describe("AMIResolver", func() {
 				Expect(lt.EnclaveEnabled).To(BeFalse())
 			})
 		})
-		It("should set EnclaveEnabled to true when ResourceNitroSandbox is in the NodeClaim's resource requests", func() {
-			nodeClaim.Spec.Resources.Requests = corev1.ResourceList{
-				v1.ResourceNitroSandbox: resource.MustParse("1"),
-			}
+		It("should set EnclaveEnabled to true when enabled on the EC2NodeClass", func() {
+			nodeClass.Spec.EnclaveOptions = &v1.EnclaveOptions{Enabled: true}
 			amiResolver := amifamily.NewDefaultResolver(fake.DefaultRegion, nil, awsEnv.CELEnvironment)
 			launchTemplates, err := amiResolver.Resolve(ctx, nodeClass, nodeClaim, instanceTypes, karpv1.CapacityTypeOnDemand, string(ec2types.TenancyDefault), &amifamily.Options{ClusterName: "test"}, "", 0)
 			Expect(err).ToNot(HaveOccurred())
@@ -1269,10 +1267,21 @@ var _ = Describe("AMIResolver", func() {
 				Expect(lt.EnclaveEnabled).To(BeTrue())
 			})
 		})
-		It("should set EnclaveEnabled to false when only other resources are requested (not ResourceNitroSandbox)", func() {
+		It("should set EnclaveEnabled to false when disabled on the EC2NodeClass", func() {
+			nodeClass.Spec.EnclaveOptions = &v1.EnclaveOptions{Enabled: false}
+			amiResolver := amifamily.NewDefaultResolver(fake.DefaultRegion, nil, awsEnv.CELEnvironment)
+			launchTemplates, err := amiResolver.Resolve(ctx, nodeClass, nodeClaim, instanceTypes, karpv1.CapacityTypeOnDemand, string(ec2types.TenancyDefault), &amifamily.Options{ClusterName: "test"}, "", 0)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(launchTemplates).ToNot(BeEmpty())
+			lo.ForEach(launchTemplates, func(lt *amifamily.LaunchTemplate, _ int) {
+				Expect(lt.EnclaveEnabled).To(BeFalse())
+			})
+		})
+		It("should not set EnclaveEnabled based on the NodeClaim's resource requests", func() {
 			nodeClaim.Spec.Resources.Requests = corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("2"),
 				corev1.ResourceMemory: resource.MustParse("4Gi"),
+				corev1.ResourceName("eks.amazonaws.com/nitro-sandbox"): resource.MustParse("1"),
 			}
 			amiResolver := amifamily.NewDefaultResolver(fake.DefaultRegion, nil, awsEnv.CELEnvironment)
 			launchTemplates, err := amiResolver.Resolve(ctx, nodeClass, nodeClaim, instanceTypes, karpv1.CapacityTypeOnDemand, string(ec2types.TenancyDefault), &amifamily.Options{ClusterName: "test"}, "", 0)

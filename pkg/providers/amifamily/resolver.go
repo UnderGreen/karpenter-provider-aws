@@ -102,7 +102,7 @@ type LaunchTemplate struct {
 	InstanceTypes                    []*cloudprovider.InstanceType `hash:"ignore"`
 	DetailedMonitoring               bool
 	EFACount                         int
-	EnclaveEnabled                   bool
+	EnclaveEnabled                   bool // Resolvers other than DefaultResolver may set this from their own signals
 	NetworkInterfaces                []*ResolvedNetworkInterface
 	CapacityType                     string
 	CapacityReservationID            string
@@ -170,6 +170,7 @@ func NewDefaultResolver(region string, eniLookup ENILookup, celEnv *kubeletcel.C
 //nolint:gocyclo
 func (r DefaultResolver) Resolve(ctx context.Context, nodeClass *v1.EC2NodeClass, nodeClaim *karpv1.NodeClaim, instanceTypes []*cloudprovider.InstanceType, capacityType string, tenancyType string, options *Options, placementGroupID string, placementGroupPartition int32) ([]*LaunchTemplate, error) {
 	amiFamily := GetAMIFamily(nodeClass.AMIFamily(), options)
+	enclaveEnabled := nodeClass.Spec.EnclaveOptions != nil && nodeClass.Spec.EnclaveOptions.Enabled
 	if len(nodeClass.Status.AMIs) == 0 {
 		return nil, fmt.Errorf("no amis exist given constraints")
 	}
@@ -302,7 +303,7 @@ func (r DefaultResolver) Resolve(ctx context.Context, nodeClass *v1.EC2NodeClass
 			// Every instance type in this bucket resolved to the same blockDeviceMappingsHash, so any one
 			// of them resolves to the same BlockDeviceMappings for the whole bucket.
 			blockDeviceMappings := nodeClass.ResolveBlockDeviceMappings(instanceTypes[0].Requirements)
-			resolvedTemplates = append(resolvedTemplates, r.resolveLaunchTemplates(nodeClass, nodeClaim, instanceTypes, capacityType, amiFamily, amiID, params.maxPods, params.efaCount, reservationIDs, params.reservationType, params.reservationInterruptible, options, tenancyType, placementGroupID, placementGroupPartition, deserializeResourceMap(params.resolvedKubeReserved), deserializeResourceMap(params.resolvedSystemReserved), parsedKubelet, blockDeviceMappings)...)
+			resolvedTemplates = append(resolvedTemplates, r.resolveLaunchTemplates(nodeClass, nodeClaim, instanceTypes, capacityType, amiFamily, amiID, params.maxPods, params.efaCount, reservationIDs, params.reservationType, params.reservationInterruptible, options, tenancyType, placementGroupID, placementGroupPartition, deserializeResourceMap(params.resolvedKubeReserved), deserializeResourceMap(params.resolvedSystemReserved), parsedKubelet, enclaveEnabled, blockDeviceMappings)...)
 		}
 	}
 	return resolvedTemplates, nil
@@ -379,6 +380,7 @@ func (r DefaultResolver) resolveLaunchTemplates(
 	resolvedKubeReserved map[string]string,
 	resolvedSystemReserved map[string]string,
 	parsedKubelet *v1.ParsedKubeletConfig,
+	enclaveEnabled bool,
 	blockDeviceMappings []*v1.BlockDeviceMapping,
 ) []*LaunchTemplate {
 	// Copied rather than re-parsed because the fields below are mutated per launch template -- maxPods
@@ -478,7 +480,7 @@ func (r DefaultResolver) resolveLaunchTemplates(
 			Tenancy:                          tenancyType,
 			PlacementGroupID:                 placementGroupID,
 			PlacementGroupPartition:          placementGroupPartition,
-			EnclaveEnabled:                   lo.Contains(lo.Keys(nodeClaim.Spec.Resources.Requests), v1.ResourceNitroSandbox),
+			EnclaveEnabled:                   enclaveEnabled,
 			ConnectionTracking:               nodeClass.Spec.ConnectionTracking,
 		}
 		if len(resolved.BlockDeviceMappings) == 0 {
