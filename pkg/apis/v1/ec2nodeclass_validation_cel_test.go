@@ -21,6 +21,7 @@ import (
 
 	"github.com/imdario/mergo"
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -1109,6 +1110,271 @@ var _ = Describe("CEL/Validation", func() {
 								VolumeInitializationRate: aws.Int32(888),
 							},
 							RootVolume: false,
+						},
+					},
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Not(Succeed()))
+		})
+	})
+	Context("BlockDeviceMappingOverrides", func() {
+		It("should succeed for a valid override with requirements", func() {
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:           nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:        nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms: nc.Spec.SecurityGroupSelectorTerms,
+					Role:                       nc.Spec.Role,
+					BlockDeviceMappingOverrides: []v1.BlockDeviceMappingOverride{
+						{
+							Requirements: []karpv1.NodeSelectorRequirementWithMinValues{
+								{
+									Key:      "karpenter.k8s.aws/instance-category",
+									Operator: corev1.NodeSelectorOpIn,
+									Values:   []string{"g", "p"},
+								},
+							},
+							BlockDeviceMappings: []*v1.BlockDeviceMapping{
+								{
+									DeviceName: aws.String("map-device-1"),
+									EBS: &v1.BlockDevice{
+										VolumeSize: resource.NewScaledQuantity(500, resource.Giga),
+									},
+									RootVolume: true,
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Succeed())
+		})
+		It("should succeed for an override with empty requirements (catch-all)", func() {
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:           nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:        nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms: nc.Spec.SecurityGroupSelectorTerms,
+					Role:                       nc.Spec.Role,
+					BlockDeviceMappingOverrides: []v1.BlockDeviceMappingOverride{
+						{
+							BlockDeviceMappings: []*v1.BlockDeviceMapping{
+								{
+									DeviceName: aws.String("map-device-1"),
+									EBS: &v1.BlockDevice{
+										VolumeSize: resource.NewScaledQuantity(500, resource.Giga),
+									},
+									RootVolume: true,
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Succeed())
+		})
+		It("should fail if an override has no blockDeviceMappings", func() {
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:           nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:        nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms: nc.Spec.SecurityGroupSelectorTerms,
+					Role:                       nc.Spec.Role,
+					BlockDeviceMappingOverrides: []v1.BlockDeviceMappingOverride{
+						{},
+					},
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Not(Succeed()))
+		})
+		It("should fail if an override has more than one root volume", func() {
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:           nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:        nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms: nc.Spec.SecurityGroupSelectorTerms,
+					Role:                       nc.Spec.Role,
+					BlockDeviceMappingOverrides: []v1.BlockDeviceMappingOverride{
+						{
+							BlockDeviceMappings: []*v1.BlockDeviceMapping{
+								{
+									DeviceName: aws.String("map-device-1"),
+									EBS: &v1.BlockDevice{
+										VolumeSize: resource.NewScaledQuantity(50, resource.Giga),
+									},
+									RootVolume: true,
+								},
+								{
+									DeviceName: aws.String("map-device-2"),
+									EBS: &v1.BlockDevice{
+										VolumeSize: resource.NewScaledQuantity(50, resource.Giga),
+									},
+									RootVolume: true,
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Not(Succeed()))
+		})
+		It("should fail for a requirement operator outside In, NotIn, Exists, DoesNotExist, Gt, Lt", func() {
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:           nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:        nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms: nc.Spec.SecurityGroupSelectorTerms,
+					Role:                       nc.Spec.Role,
+					BlockDeviceMappingOverrides: []v1.BlockDeviceMappingOverride{
+						{
+							Requirements: []karpv1.NodeSelectorRequirementWithMinValues{
+								{
+									Key:      "karpenter.k8s.aws/instance-category",
+									Operator: karpv1.NodeSelectorOpGte,
+									Values:   []string{"1"},
+								},
+							},
+							BlockDeviceMappings: []*v1.BlockDeviceMapping{
+								{
+									DeviceName: aws.String("map-device-1"),
+									EBS: &v1.BlockDevice{
+										VolumeSize: resource.NewScaledQuantity(50, resource.Giga),
+									},
+									RootVolume: true,
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Not(Succeed()))
+		})
+		It("should fail if a requirement sets minValues", func() {
+			minValues := 2
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:           nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:        nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms: nc.Spec.SecurityGroupSelectorTerms,
+					Role:                       nc.Spec.Role,
+					BlockDeviceMappingOverrides: []v1.BlockDeviceMappingOverride{
+						{
+							Requirements: []karpv1.NodeSelectorRequirementWithMinValues{
+								{
+									Key:       "karpenter.k8s.aws/instance-category",
+									Operator:  corev1.NodeSelectorOpIn,
+									Values:    []string{"g", "p"},
+									MinValues: &minValues,
+								},
+							},
+							BlockDeviceMappings: []*v1.BlockDeviceMapping{
+								{
+									DeviceName: aws.String("map-device-1"),
+									EBS: &v1.BlockDevice{
+										VolumeSize: resource.NewScaledQuantity(50, resource.Giga),
+									},
+									RootVolume: true,
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Not(Succeed()))
+		})
+		It("should fail if more than 20 overrides are specified", func() {
+			overrides := make([]v1.BlockDeviceMappingOverride, 0, 21)
+			for i := 0; i < 21; i++ {
+				overrides = append(overrides, v1.BlockDeviceMappingOverride{
+					Requirements: []karpv1.NodeSelectorRequirementWithMinValues{
+						{
+							Key:      "karpenter.k8s.aws/instance-category",
+							Operator: corev1.NodeSelectorOpIn,
+							Values:   []string{fmt.Sprintf("v%d", i)},
+						},
+					},
+					BlockDeviceMappings: []*v1.BlockDeviceMapping{
+						{
+							DeviceName: aws.String("map-device-1"),
+							EBS: &v1.BlockDevice{
+								VolumeSize: resource.NewScaledQuantity(50, resource.Giga),
+							},
+							RootVolume: true,
+						},
+					},
+				})
+			}
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:            nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:         nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms:  nc.Spec.SecurityGroupSelectorTerms,
+					Role:                        nc.Spec.Role,
+					BlockDeviceMappingOverrides: overrides,
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Not(Succeed()))
+		})
+		It("should fail if an override has more than 30 requirements", func() {
+			requirements := make([]karpv1.NodeSelectorRequirementWithMinValues, 0, 31)
+			for i := 0; i < 31; i++ {
+				requirements = append(requirements, karpv1.NodeSelectorRequirementWithMinValues{
+					Key:      fmt.Sprintf("karpenter.k8s.aws/key-%d", i),
+					Operator: corev1.NodeSelectorOpExists,
+				})
+			}
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:           nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:        nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms: nc.Spec.SecurityGroupSelectorTerms,
+					Role:                       nc.Spec.Role,
+					BlockDeviceMappingOverrides: []v1.BlockDeviceMappingOverride{
+						{
+							Requirements: requirements,
+							BlockDeviceMappings: []*v1.BlockDeviceMapping{
+								{
+									DeviceName: aws.String("map-device-1"),
+									EBS: &v1.BlockDevice{
+										VolumeSize: resource.NewScaledQuantity(50, resource.Giga),
+									},
+									RootVolume: true,
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(env.Client.Create(ctx, nodeClass)).To(Not(Succeed()))
+		})
+		It("should fail if an override has more than 50 blockDeviceMappings", func() {
+			mappings := make([]*v1.BlockDeviceMapping, 0, 51)
+			for i := 0; i < 51; i++ {
+				mappings = append(mappings, &v1.BlockDeviceMapping{
+					DeviceName: aws.String(fmt.Sprintf("map-device-%d", i)),
+					EBS: &v1.BlockDevice{
+						VolumeSize: resource.NewScaledQuantity(50, resource.Giga),
+					},
+				})
+			}
+			nodeClass := &v1.EC2NodeClass{
+				ObjectMeta: test.ObjectMeta(metav1.ObjectMeta{}),
+				Spec: v1.EC2NodeClassSpec{
+					AMISelectorTerms:           nc.Spec.AMISelectorTerms,
+					SubnetSelectorTerms:        nc.Spec.SubnetSelectorTerms,
+					SecurityGroupSelectorTerms: nc.Spec.SecurityGroupSelectorTerms,
+					Role:                       nc.Spec.Role,
+					BlockDeviceMappingOverrides: []v1.BlockDeviceMappingOverride{
+						{
+							BlockDeviceMappings: mappings,
 						},
 					},
 				},

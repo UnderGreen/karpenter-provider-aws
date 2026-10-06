@@ -145,6 +145,191 @@ spec:
                 associatePublicIPAddress:
                   description: AssociatePublicIPAddress controls if public IP addresses are assigned to instances that are launched with the nodeclass.
                   type: boolean
+                blockDeviceMappingOverrides:
+                  description: |-
+                    BlockDeviceMappingOverrides applies a full blockDeviceMappings list to instance types matching
+                    a requirement selector. Overrides are evaluated in list order; the first override whose
+                    requirements match an instance type wins and fully replaces the default blockDeviceMappings
+                    for that instance type. Instance types matched by no override fall back to blockDeviceMappings.
+                  items:
+                    description: BlockDeviceMappingOverride applies BlockDeviceMappings to instance types matched by Requirements.
+                    properties:
+                      blockDeviceMappings:
+                        description: |-
+                          BlockDeviceMappings fully replaces the default blockDeviceMappings for instance types matched
+                          by Requirements.
+                        items:
+                          properties:
+                            deviceName:
+                              description: The device name (for example, /dev/sdh or xvdh).
+                              type: string
+                            ebs:
+                              description: EBS contains parameters used to automatically set up EBS volumes when an instance is launched.
+                              properties:
+                                deleteOnTermination:
+                                  description: DeleteOnTermination indicates whether the EBS volume is deleted on instance termination.
+                                  type: boolean
+                                encrypted:
+                                  description: |-
+                                    Encrypted indicates whether the EBS volume is encrypted. Encrypted volumes can only
+                                    be attached to instances that support Amazon EBS encryption. If you are creating
+                                    a volume from a snapshot, you can't specify an encryption value.
+                                  type: boolean
+                                iops:
+                                  description: |-
+                                    IOPS is the number of I/O operations per second (IOPS). For gp3, io1, and io2 volumes,
+                                    this represents the number of IOPS that are provisioned for the volume. For
+                                    gp2 volumes, this represents the baseline performance of the volume and the
+                                    rate at which the volume accumulates I/O credits for bursting.
+
+                                    The following are the supported values for each volume type:
+
+                                       * gp3: 3,000-16,000 IOPS
+
+                                       * io1: 100-64,000 IOPS
+
+                                       * io2: 100-64,000 IOPS
+
+                                    For io1 and io2 volumes, we guarantee 64,000 IOPS only for Instances built
+                                    on the Nitro System (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances).
+                                    Other instance families guarantee performance up to 32,000 IOPS.
+
+                                    This parameter is supported for io1, io2, and gp3 volumes only. This parameter
+                                    is not supported for gp2, st1, sc1, or standard volumes.
+                                  format: int64
+                                  type: integer
+                                kmsKeyID:
+                                  description: Identifier (key ID, key alias, key ARN, or alias ARN) of the customer managed KMS key to use for EBS encryption.
+                                  type: string
+                                snapshotID:
+                                  description: SnapshotID is the ID of an EBS snapshot
+                                  type: string
+                                throughput:
+                                  description: |-
+                                    Throughput to provision for a gp3 volume, with a maximum of 1,000 MiB/s.
+                                    Valid Range: Minimum value of 125. Maximum value of 1000.
+                                  format: int64
+                                  type: integer
+                                volumeInitializationRate:
+                                  description: |-
+                                    VolumeInitializationRate specifies the Amazon EBS Provisioned Rate for Volume Initialization,
+                                    in MiB/s, at which to download the snapshot blocks from Amazon S3 to the volume. This is also known as volume
+                                    initialization. Specifying a volume initialization rate ensures that the volume is initialized at a
+                                    predictable and consistent rate after creation. Only allowed if SnapshotID is set.
+                                    Valid Range: Minimum value of 100. Maximum value of 300.
+                                  format: int32
+                                  maximum: 300
+                                  minimum: 100
+                                  type: integer
+                                volumeSize:
+                                  description: |-
+                                    VolumeSize in `Gi`, `G`, `Ti`, or `T`. You must specify either a snapshot ID or
+                                    a volume size. The following are the supported volumes sizes for each volume
+                                    type:
+
+                                       * gp2 and gp3: 1-16,384
+
+                                       * io1 and io2: 4-16,384
+
+                                       * st1 and sc1: 125-16,384
+
+                                       * standard: 1-1,024
+                                  pattern: ^((?:[1-9][0-9]{0,3}|[1-4][0-9]{4}|[5][0-8][0-9]{3}|59000)Gi|(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|[6][0-3][0-9]{3}|64000)G|([1-9]||[1-5][0-7]|58)Ti|([1-9]||[1-5][0-9]|6[0-3]|64)T)$
+                                  type: string
+                                volumeType:
+                                  description: |-
+                                    VolumeType of the block device.
+                                    For more information, see Amazon EBS volume types (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)
+                                    in the Amazon Elastic Compute Cloud User Guide.
+                                  enum:
+                                    - standard
+                                    - io1
+                                    - io2
+                                    - gp2
+                                    - sc1
+                                    - st1
+                                    - gp3
+                                  type: string
+                              type: object
+                              x-kubernetes-validations:
+                                - message: snapshotID or volumeSize must be defined
+                                  rule: has(self.snapshotID) || has(self.volumeSize)
+                                - message: snapshotID must be set when volumeInitializationRate is set
+                                  rule: '!has(self.volumeInitializationRate) || (has(self.snapshotID) && self.snapshotID != '''')'
+                            rootVolume:
+                              description: |-
+                                RootVolume is a flag indicating if this device is mounted as kubelet root dir. You can
+                                configure at most one root volume in BlockDeviceMappings.
+                              type: boolean
+                          type: object
+                        maxItems: 50
+                        minItems: 1
+                        type: array
+                        x-kubernetes-validations:
+                          - message: must have only one blockDeviceMappings with rootVolume
+                            rule: self.filter(x, has(x.rootVolume)?x.rootVolume==true:false).size() <= 1
+                      requirements:
+                        description: |-
+                          Requirements select the instance types this override applies to, evaluated against instance
+                          type well-known labels (e.g. karpenter.k8s.aws/instance-family, -category, -size, -gpu-count).
+                          An empty list matches every instance type.
+                        items:
+                          description: |-
+                            A node selector requirement is a selector that contains values, a key, an operator that relates the key and values
+                            and minValues that represent the requirement to have at least that many values.
+                          properties:
+                            key:
+                              description: The label key that the selector applies to.
+                              type: string
+                            minValues:
+                              description: |-
+                                This field is ALPHA and can be dropped or replaced at any time
+                                MinValues is the minimum number of unique values required to define the flexibility of the specific requirement.
+                              maximum: 50
+                              minimum: 1
+                              type: integer
+                            operator:
+                              description: |-
+                                Represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists, DoesNotExist. Gt, Lt, Gte, and Lte.
+                              enum:
+                                - In
+                                - NotIn
+                                - Exists
+                                - DoesNotExist
+                                - Gt
+                                - Lt
+                                - Gte
+                                - Lte
+                              type: string
+                            values:
+                              description: |-
+                                An array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. If the operator is Gt, Lt, Gte, or Lte, the values
+                                array must have a single element, which will be interpreted as an integer.
+                                This array is replaced during a strategic merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                            - key
+                            - operator
+                          type: object
+                        maxItems: 30
+                        type: array
+                        x-kubernetes-validations:
+                          - message: requirements operator must be In, NotIn, Exists, DoesNotExist, Gt, or Lt
+                            rule: self.all(x, x.operator in ['In','NotIn','Exists','DoesNotExist','Gt','Lt'])
+                    required:
+                      - blockDeviceMappings
+                    type: object
+                  maxItems: 20
+                  type: array
+                  x-kubernetes-validations:
+                    - message: requirements with 'minValues' cannot be used with blockDeviceMappingOverrides
+                      rule: self.all(o, !has(o.requirements) || o.requirements.all(r, !has(r.minValues)))
                 blockDeviceMappings:
                   description: BlockDeviceMappings to be applied to provisioned nodes.
                   items:

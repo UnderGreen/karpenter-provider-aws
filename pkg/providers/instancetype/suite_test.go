@@ -982,6 +982,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 				nil,
 				nil,
 				nodeClass.Spec.BlockDeviceMappings,
+				nil,
 				nodeClass.Spec.InstanceStorePolicy,
 				nil,
 				maxPodsOf(kc),
@@ -1008,6 +1009,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 				nil,
 				nil,
 				windowsNodeClass.Spec.BlockDeviceMappings,
+				nil,
 				windowsNodeClass.Spec.InstanceStorePolicy,
 				nil,
 				maxPodsOf(kc),
@@ -1095,6 +1097,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1125,6 +1128,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1151,6 +1155,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1186,6 +1191,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1228,6 +1234,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1260,6 +1267,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1292,6 +1300,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1324,6 +1333,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1358,6 +1368,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1393,6 +1404,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1425,6 +1437,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1461,6 +1474,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1484,6 +1498,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1521,6 +1536,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1557,6 +1573,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1593,6 +1610,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1621,6 +1639,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1641,6 +1660,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1670,6 +1690,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1706,6 +1727,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1747,6 +1769,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1785,6 +1808,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1831,6 +1855,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 				nil,
 				nil,
 				nodeClass.Spec.BlockDeviceMappings,
+				nil,
 				nodeClass.Spec.InstanceStorePolicy,
 				nil,
 				maxPodsOf(kc),
@@ -1865,6 +1890,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1896,6 +1922,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1925,6 +1952,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 					nil,
 					nil,
 					nodeClass.Spec.BlockDeviceMappings,
+					nil,
 					nodeClass.Spec.InstanceStorePolicy,
 					nil,
 					maxPodsOf(kc),
@@ -1955,6 +1983,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -1975,6 +2004,7 @@ var _ = Describe("InstanceTypeProvider", func() {
 						nil,
 						nil,
 						nodeClass.Spec.BlockDeviceMappings,
+						nil,
 						nodeClass.Spec.InstanceStorePolicy,
 						nil,
 						maxPodsOf(kc),
@@ -2577,6 +2607,101 @@ var _ = Describe("InstanceTypeProvider", func() {
 				Expect(*ltInput.LaunchTemplateData.BlockDeviceMappings[0].Ebs.SnapshotId).To(Equal("snap-xxxxxxxx"))
 				Expect(*ltInput.LaunchTemplateData.BlockDeviceMappings[0].Ebs.VolumeInitializationRate).To(Equal(int32(100)))
 			})
+		})
+		Context("BlockDeviceMappingOverrides", func() {
+			BeforeEach(func() {
+				nodeClass.Spec.BlockDeviceMappingOverrides = []v1.BlockDeviceMappingOverride{
+					{
+						Requirements: []karpv1.NodeSelectorRequirementWithMinValues{
+							{Key: v1.LabelInstanceCategory, Operator: corev1.NodeSelectorOpIn, Values: []string{"g"}},
+						},
+						BlockDeviceMappings: []*v1.BlockDeviceMapping{
+							{
+								DeviceName: aws.String("/dev/xvda"),
+								EBS: &v1.BlockDevice{
+									VolumeSize: lo.ToPtr(resource.MustParse("100Gi")),
+								},
+							},
+						},
+					},
+				}
+			})
+			It("should use the override's blockDeviceMappings for both scheduler capacity and the launch template on a matching instance type", func() {
+				ExpectApplied(ctx, env.Client, nodePool, nodeClass)
+				pod := coretest.UnschedulablePod(coretest.PodOptions{
+					NodeRequirements: []corev1.NodeSelectorRequirement{{
+						Key:      corev1.LabelInstanceTypeStable,
+						Operator: corev1.NodeSelectorOpIn,
+						Values:   []string{"g4dn.8xlarge"},
+					}},
+				})
+				ExpectProvisioned(ctx, env.Client, cluster, cloudProvider, prov, pod)
+				node := ExpectScheduled(ctx, env.Client, pod)
+				Expect(*node.Status.Capacity.StorageEphemeral()).To(Equal(resource.MustParse("100Gi")))
+				Expect(awsEnv.EC2API.CreateLaunchTemplateBehavior.CalledWithInput.Len()).To(BeNumerically(">=", 1))
+				awsEnv.EC2API.CreateLaunchTemplateBehavior.CalledWithInput.ForEach(func(ltInput *ec2.CreateLaunchTemplateInput) {
+					Expect(ltInput.LaunchTemplateData.BlockDeviceMappings).To(HaveLen(1))
+					Expect(*ltInput.LaunchTemplateData.BlockDeviceMappings[0].DeviceName).To(Equal("/dev/xvda"))
+					Expect(*ltInput.LaunchTemplateData.BlockDeviceMappings[0].Ebs.VolumeSize).To(Equal(int32(100)))
+				})
+			})
+			It("should fall back to the default blockDeviceMappings on an instance type that no override matches", func() {
+				ExpectApplied(ctx, env.Client, nodePool, nodeClass)
+				pod := coretest.UnschedulablePod(coretest.PodOptions{
+					NodeRequirements: []corev1.NodeSelectorRequirement{{
+						Key:      corev1.LabelInstanceTypeStable,
+						Operator: corev1.NodeSelectorOpIn,
+						Values:   []string{"m5.xlarge"},
+					}},
+				})
+				ExpectProvisioned(ctx, env.Client, cluster, cloudProvider, prov, pod)
+				node := ExpectScheduled(ctx, env.Client, pod)
+				Expect(*node.Status.Capacity.StorageEphemeral()).To(Equal(resource.MustParse("20Gi")))
+				Expect(awsEnv.EC2API.CreateLaunchTemplateBehavior.CalledWithInput.Len()).To(BeNumerically(">=", 1))
+				awsEnv.EC2API.CreateLaunchTemplateBehavior.CalledWithInput.ForEach(func(ltInput *ec2.CreateLaunchTemplateInput) {
+					Expect(ltInput.LaunchTemplateData.BlockDeviceMappings).To(HaveLen(1))
+					Expect(*ltInput.LaunchTemplateData.BlockDeviceMappings[0].DeviceName).To(Equal("/dev/xvda"))
+					Expect(ltInput.LaunchTemplateData.BlockDeviceMappings[0].Ebs.VolumeSize).To(BeNil())
+				})
+			})
+		})
+	})
+	Context("CacheKey", func() {
+		It("should be stable across calls for an identical config", func() {
+			nodeClass.Spec.BlockDeviceMappingOverrides = []v1.BlockDeviceMappingOverride{
+				{
+					Requirements: []karpv1.NodeSelectorRequirementWithMinValues{
+						{Key: v1.LabelInstanceCategory, Operator: corev1.NodeSelectorOpIn, Values: []string{"g"}},
+					},
+					BlockDeviceMappings: []*v1.BlockDeviceMapping{{DeviceName: aws.String("/dev/xvda")}},
+				},
+			}
+			resolver := instancetype.NewDefaultResolver(fake.DefaultRegion, nil)
+			Expect(resolver.CacheKey(nodeClass)).To(Equal(resolver.CacheKey(nodeClass)))
+		})
+		It("should change when blockDeviceMappingOverrides is added", func() {
+			resolver := instancetype.NewDefaultResolver(fake.DefaultRegion, nil)
+			before := resolver.CacheKey(nodeClass)
+			nodeClass.Spec.BlockDeviceMappingOverrides = []v1.BlockDeviceMappingOverride{
+				{BlockDeviceMappings: []*v1.BlockDeviceMapping{{DeviceName: aws.String("/dev/xvda")}}},
+			}
+			Expect(resolver.CacheKey(nodeClass)).ToNot(Equal(before))
+		})
+		It("should change when blockDeviceMappingOverrides are reordered", func() {
+			resolver := instancetype.NewDefaultResolver(fake.DefaultRegion, nil)
+			gpuOverride := v1.BlockDeviceMappingOverride{
+				Requirements: []karpv1.NodeSelectorRequirementWithMinValues{
+					{Key: v1.LabelInstanceCategory, Operator: corev1.NodeSelectorOpIn, Values: []string{"g"}},
+				},
+				BlockDeviceMappings: []*v1.BlockDeviceMapping{{DeviceName: aws.String("/dev/xvda")}},
+			}
+			catchAllOverride := v1.BlockDeviceMappingOverride{
+				BlockDeviceMappings: []*v1.BlockDeviceMapping{{DeviceName: aws.String("/dev/xvdb")}},
+			}
+			nodeClass.Spec.BlockDeviceMappingOverrides = []v1.BlockDeviceMappingOverride{gpuOverride, catchAllOverride}
+			before := resolver.CacheKey(nodeClass)
+			nodeClass.Spec.BlockDeviceMappingOverrides = []v1.BlockDeviceMappingOverride{catchAllOverride, gpuOverride}
+			Expect(resolver.CacheKey(nodeClass)).ToNot(Equal(before))
 		})
 	})
 	Context("Metadata Options", func() {

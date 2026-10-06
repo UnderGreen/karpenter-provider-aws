@@ -66,6 +66,7 @@ type NodeClass interface {
 	AMIFamily() string
 	AMIs() []v1.AMI
 	BlockDeviceMappings() []*v1.BlockDeviceMapping
+	BlockDeviceMappingOverrides() []v1.BlockDeviceMappingOverride
 	CapacityReservations() []v1.CapacityReservation
 	CPUOptions() *v1.CPUOptions
 	InstanceStorePolicy() *v1.InstanceStorePolicy

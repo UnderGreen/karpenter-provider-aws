@@ -86,12 +86,16 @@ func (d *DefaultResolver) CacheKey(nodeClass NodeClass) string {
 	kc := nodeClass.KubeletConfiguration()
 	kcHash, _ := hashstructure.Hash(kc.String(), hashstructure.FormatV2, nil)
 	blockDeviceMappingsHash, _ := hashstructure.Hash(nodeClass.BlockDeviceMappings(), hashstructure.FormatV2, &hashstructure.HashOptions{SlicesAsSets: true})
+	// BlockDeviceMappingOverrides are matched in list order (first match wins), so this must NOT use
+	// SlicesAsSets: reordering overrides can change which one resolves for a given instance type.
+	blockDeviceMappingOverridesHash, _ := hashstructure.Hash(nodeClass.BlockDeviceMappingOverrides(), hashstructure.FormatV2, nil)
 	capacityReservationHash, _ := hashstructure.Hash(nodeClass.CapacityReservations(), hashstructure.FormatV2, nil)
 	networkInterfaceHash, _ := hashstructure.Hash(nodeClass.NetworkInterfaces(), hashstructure.FormatV2, &hashstructure.HashOptions{SlicesAsSets: true})
 	return fmt.Sprintf(
-		"%016x-%016x-%016x-%016x-%s-%s",
+		"%016x-%016x-%016x-%016x-%016x-%s-%s",
 		kcHash,
 		blockDeviceMappingsHash,
+		blockDeviceMappingOverridesHash,
 		capacityReservationHash,
 		networkInterfaceHash,
 		lo.FromPtr((*string)(nodeClass.InstanceStorePolicy())),
@@ -141,6 +145,7 @@ func (d *DefaultResolver) Resolve(ctx context.Context, info ec2types.InstanceTyp
 		zones,
 		nodeClass.ZoneInfo(),
 		nodeClass.BlockDeviceMappings(),
+		nodeClass.BlockDeviceMappingOverrides(),
 		nodeClass.InstanceStorePolicy(),
 		nodeClass.NetworkInterfaces(),
 		maxPods,
@@ -290,6 +295,7 @@ func NewInstanceType(
 	offeringZones []string,
 	subnetZoneInfo []v1.ZoneInfo,
 	blockDeviceMappings []*v1.BlockDeviceMapping,
+	blockDeviceMappingOverrides []v1.BlockDeviceMappingOverride,
 	instanceStorePolicy *v1.InstanceStorePolicy,
 	networkInterfaces []*v1.NetworkInterface,
 	maxPods *int32,
@@ -302,15 +308,19 @@ func NewInstanceType(
 	capacityReservations []v1.CapacityReservation,
 ) *cloudprovider.InstanceType {
 	amiFamily := amifamily.GetAMIFamily(amiFamilyType, &amifamily.Options{})
+	requirements := computeRequirements(info, region, offeringZones, subnetZoneInfo, amiFamily, capacityReservations)
+	// BlockDeviceMappingOverrides are resolved per instance type against the requirements just
+	// computed, so ephemeral-storage capacity here always matches what amifamily.Resolve launches.
+	resolvedBlockDeviceMappings := v1.ResolveBlockDeviceMappings(requirements, blockDeviceMappings, blockDeviceMappingOverrides)
 	it := &cloudprovider.InstanceType{
 		Name:         string(info.InstanceType),
-		Requirements: computeRequirements(info, region, offeringZones, subnetZoneInfo, amiFamily, capacityReservations),
-		Capacity:     computeCapacity(ctx, info, amiFamily, blockDeviceMappings, instanceStorePolicy, networkInterfaces, maxPods, podsPerCore),
+		Requirements: requirements,
+		Capacity:     computeCapacity(ctx, info, amiFamily, resolvedBlockDeviceMappings, instanceStorePolicy, networkInterfaces, maxPods, podsPerCore),
 		Overhead: &cloudprovider.InstanceTypeOverhead{
 			KubeReserved: kubeReservedResources(cpu(info), lo.Ternary(amiFamily.FeatureFlags().UsesENILimitedMemoryOverhead,
 				ENILimitedPods(ctx, info, 0, networkInterfaces), pods(ctx, info, amiFamily, maxPods, podsPerCore, networkInterfaces)), kubeReserved),
 			SystemReserved:    systemReservedResources(systemReserved),
-			EvictionThreshold: evictionThreshold(memory(ctx, info), ephemeralStorage(info, amiFamily, blockDeviceMappings, instanceStorePolicy), evictionHard),
+			EvictionThreshold: evictionThreshold(memory(ctx, info), ephemeralStorage(info, amiFamily, resolvedBlockDeviceMappings, instanceStorePolicy), evictionHard),
 		},
 	}
 	if it.Requirements.Compatible(scheduling.NewRequirements(scheduling.NewRequirement(corev1.LabelOSStable, corev1.NodeSelectorOpIn, string(corev1.Windows)))) == nil {

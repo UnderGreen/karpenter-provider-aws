@@ -1291,6 +1291,36 @@ spec:
 
 The `Custom` AMIFamily ships without any default `blockDeviceMappings`.
 
+### blockDeviceMappingOverrides
+
+The `blockDeviceMappingOverrides` field lets you apply a different `blockDeviceMappings` list to instance types matched by a requirement selector, so a single `EC2NodeClass` can give (for example) GPU instances a larger data volume while leaving everything else on the default. Overrides are evaluated in list order; the first override whose `requirements` match an instance type wins and fully replaces the default `blockDeviceMappings` for that instance type -- overrides don't merge with the default or with each other. Instance types matched by no override fall back to `blockDeviceMappings`, and if that's unset too, to the AMIFamily default shown above. `requirements` use the same key/operator/values shape as NodePool requirements, matched against the instance type's [well-known labels](./scheduling.md#instance-types) (`karpenter.k8s.aws/instance-family`, `-category`, `-size`, `-gpu-count`, etc); an empty `requirements` list matches every instance type.
+
+```yaml
+spec:
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 20Gi
+        volumeType: gp3
+        encrypted: true
+  blockDeviceMappingOverrides:
+    - requirements:
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["g", "p"]
+      blockDeviceMappings:
+        - deviceName: /dev/xvda
+          ebs:
+            volumeSize: 20Gi
+            volumeType: gp3
+            encrypted: true
+        - deviceName: /dev/xvdb
+          ebs:
+            volumeSize: 200Gi
+            volumeType: gp3
+            encrypted: true
+```
+
 ## spec.networkInterfaces
 
 The `networkInterfaces` field allows you to configure network interface attachments for instances, including support for EFA (Elastic Fabric Adapter) devices for high-performance computing and machine learning workloads. For more information see the [AWS EFA docs](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html).

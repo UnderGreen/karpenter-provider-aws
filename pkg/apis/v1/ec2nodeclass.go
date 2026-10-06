@@ -27,6 +27,8 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	karpv1 "sigs.k8s.io/karpenter/pkg/apis/v1"
+	"sigs.k8s.io/karpenter/pkg/scheduling"
 )
 
 // EC2NodeClassSpec is the top level specification for the AWS Karpenter Provider.
@@ -126,6 +128,14 @@ type EC2NodeClassSpec struct {
 	// +kubebuilder:validation:MaxItems:=50
 	// +optional
 	BlockDeviceMappings []*BlockDeviceMapping `json:"blockDeviceMappings,omitempty"`
+	// BlockDeviceMappingOverrides applies a full blockDeviceMappings list to instance types matching
+	// a requirement selector. Overrides are evaluated in list order; the first override whose
+	// requirements match an instance type wins and fully replaces the default blockDeviceMappings
+	// for that instance type. Instance types matched by no override fall back to blockDeviceMappings.
+	// +kubebuilder:validation:XValidation:message="requirements with 'minValues' cannot be used with blockDeviceMappingOverrides",rule="self.all(o, !has(o.requirements) || o.requirements.all(r, !has(r.minValues)))"
+	// +kubebuilder:validation:MaxItems:=20
+	// +optional
+	BlockDeviceMappingOverrides []BlockDeviceMappingOverride `json:"blockDeviceMappingOverrides,omitempty"`
 	// InstanceStorePolicy specifies how to handle instance-store disks.
 	// +optional
 	InstanceStorePolicy *InstanceStorePolicy `json:"instanceStorePolicy,omitempty"`
@@ -396,6 +406,24 @@ type BlockDeviceMapping struct {
 	RootVolume bool `json:"rootVolume,omitempty"`
 }
 
+// BlockDeviceMappingOverride applies BlockDeviceMappings to instance types matched by Requirements.
+type BlockDeviceMappingOverride struct {
+	// Requirements select the instance types this override applies to, evaluated against instance
+	// type well-known labels (e.g. karpenter.k8s.aws/instance-family, -category, -size, -gpu-count).
+	// An empty list matches every instance type.
+	// +kubebuilder:validation:XValidation:message="requirements operator must be In, NotIn, Exists, DoesNotExist, Gt, or Lt",rule="self.all(x, x.operator in ['In','NotIn','Exists','DoesNotExist','Gt','Lt'])"
+	// +kubebuilder:validation:MaxItems:=30
+	// +optional
+	Requirements []karpv1.NodeSelectorRequirementWithMinValues `json:"requirements,omitempty"`
+	// BlockDeviceMappings fully replaces the default blockDeviceMappings for instance types matched
+	// by Requirements.
+	// +kubebuilder:validation:XValidation:message="must have only one blockDeviceMappings with rootVolume",rule="self.filter(x, has(x.rootVolume)?x.rootVolume==true:false).size() <= 1"
+	// +kubebuilder:validation:MaxItems:=50
+	// +kubebuilder:validation:MinItems:=1
+	// +required
+	BlockDeviceMappings []*BlockDeviceMapping `json:"blockDeviceMappings"`
+}
+
 type BlockDevice struct {
 	// DeleteOnTermination indicates whether the EBS volume is deleted on instance termination.
 	// +optional
@@ -577,6 +605,33 @@ func (in *EC2NodeClass) InstanceProfileTags(clusterName string, region string) m
 
 func (in *EC2NodeClass) BlockDeviceMappings() []*BlockDeviceMapping {
 	return in.Spec.BlockDeviceMappings
+}
+
+func (in *EC2NodeClass) BlockDeviceMappingOverrides() []BlockDeviceMappingOverride {
+	return in.Spec.BlockDeviceMappingOverrides
+}
+
+// ResolveBlockDeviceMappings returns the blockDeviceMappings to use for an instance type with the
+// given requirements. The first BlockDeviceMappingOverride (in list order) whose Requirements are
+// compatible with the instance type wins and fully replaces the default. If none match, falls back
+// to the top-level BlockDeviceMappings (which may itself be empty, in which case the caller applies
+// the AMI family default).
+func (in *EC2NodeClass) ResolveBlockDeviceMappings(requirements scheduling.Requirements) []*BlockDeviceMapping {
+	return ResolveBlockDeviceMappings(requirements, in.Spec.BlockDeviceMappings, in.Spec.BlockDeviceMappingOverrides)
+}
+
+// ResolveBlockDeviceMappings is the free-function form of EC2NodeClass.ResolveBlockDeviceMappings,
+// for callers (e.g. instancetype.NewInstanceType) that only have the raw spec fields rather than an
+// EC2NodeClass. Both call sites that consume blockDeviceMappings -- the launch template resolver and
+// the instance type's ephemeral-storage capacity -- must resolve through this same function so they
+// never diverge for a given instance type.
+func ResolveBlockDeviceMappings(requirements scheduling.Requirements, blockDeviceMappings []*BlockDeviceMapping, overrides []BlockDeviceMappingOverride) []*BlockDeviceMapping {
+	for _, o := range overrides {
+		if requirements.Compatible(scheduling.NewNodeSelectorRequirementsWithMinValues(o.Requirements...)) == nil {
+			return o.BlockDeviceMappings
+		}
+	}
+	return blockDeviceMappings
 }
 
 func (in *EC2NodeClass) InstanceStorePolicy() *InstanceStorePolicy {

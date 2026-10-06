@@ -1283,6 +1283,61 @@ var _ = Describe("AMIResolver", func() {
 			})
 		})
 	})
+	Context("BlockDeviceMappingOverrides", func() {
+		BeforeEach(func() {
+			instanceTypes = []*corecloudprovider.InstanceType{
+				corecloudfake.NewInstanceType("g4dn.8xlarge", corecloudfake.WithRequirements(scheduling.NewRequirement(v1.LabelInstanceCategory, corev1.NodeSelectorOpIn, "g"))),
+				corecloudfake.NewInstanceType("g4dn.16xlarge", corecloudfake.WithRequirements(scheduling.NewRequirement(v1.LabelInstanceCategory, corev1.NodeSelectorOpIn, "g"))),
+				corecloudfake.NewInstanceType("m5.large", corecloudfake.WithRequirements(scheduling.NewRequirement(v1.LabelInstanceCategory, corev1.NodeSelectorOpIn, "m"))),
+			}
+			nodeClass.Spec.BlockDeviceMappings = []*v1.BlockDeviceMapping{
+				{
+					DeviceName: aws.String("/dev/xvda"),
+					EBS:        &v1.BlockDevice{VolumeSize: lo.ToPtr(resource.MustParse("20Gi"))},
+				},
+			}
+			nodeClass.Spec.BlockDeviceMappingOverrides = []v1.BlockDeviceMappingOverride{
+				{
+					Requirements: []karpv1.NodeSelectorRequirementWithMinValues{
+						{Key: v1.LabelInstanceCategory, Operator: corev1.NodeSelectorOpIn, Values: []string{"g"}},
+					},
+					BlockDeviceMappings: []*v1.BlockDeviceMapping{
+						{
+							DeviceName: aws.String("/dev/xvda"),
+							EBS:        &v1.BlockDevice{VolumeSize: lo.ToPtr(resource.MustParse("200Gi"))},
+						},
+					},
+				},
+			}
+		})
+		It("should give matching and non-matching instance types distinct launch templates carrying the resolved blockDeviceMappings", func() {
+			amiResolver := amifamily.NewDefaultResolver(fake.DefaultRegion, nil, awsEnv.CELEnvironment)
+			launchTemplates, err := amiResolver.Resolve(ctx, nodeClass, nodeClaim, instanceTypes, karpv1.CapacityTypeOnDemand, string(ec2types.TenancyDefault), &amifamily.Options{ClusterName: "test"}, "", 0)
+			Expect(err).ToNot(HaveOccurred())
+			// g4dn.8xlarge and g4dn.16xlarge match the override and share one launch template (dedup
+			// preserved); m5.large doesn't match and gets its own launch template with the default
+			// blockDeviceMappings -- this is the anti-divergence guarantee: the launch template a
+			// matching instance type receives always carries the same blockDeviceMappings the scheduler
+			// resolved its ephemeral-storage capacity from.
+			Expect(launchTemplates).To(HaveLen(2))
+			gpuLT, ok := lo.Find(launchTemplates, func(lt *amifamily.LaunchTemplate) bool {
+				return lo.ContainsBy(lt.InstanceTypes, func(it *corecloudprovider.InstanceType) bool { return it.Name == "g4dn.8xlarge" })
+			})
+			Expect(ok).To(BeTrue())
+			Expect(gpuLT.InstanceTypes).To(HaveLen(2))
+			Expect(gpuLT.BlockDeviceMappings).To(HaveLen(1))
+			expectedGPUSize := resource.MustParse("200Gi")
+			Expect(gpuLT.BlockDeviceMappings[0].EBS.VolumeSize.Value()).To(Equal(expectedGPUSize.Value()))
+
+			defaultLT, ok := lo.Find(launchTemplates, func(lt *amifamily.LaunchTemplate) bool {
+				return lo.ContainsBy(lt.InstanceTypes, func(it *corecloudprovider.InstanceType) bool { return it.Name == "m5.large" })
+			})
+			Expect(ok).To(BeTrue())
+			Expect(defaultLT.BlockDeviceMappings).To(HaveLen(1))
+			expectedDefaultSize := resource.MustParse("20Gi")
+			Expect(defaultLT.BlockDeviceMappings[0].EBS.VolumeSize.Value()).To(Equal(expectedDefaultSize.Value()))
+		})
+	})
 })
 
 func ExpectConsistsOfAMIQueries(expected, actual []amifamily.DescribeImageQuery) {

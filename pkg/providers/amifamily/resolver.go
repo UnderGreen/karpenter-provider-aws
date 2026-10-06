@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/awslabs/operatorpkg/serrors"
+	"github.com/mitchellh/hashstructure/v2"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -205,6 +206,10 @@ func (r DefaultResolver) Resolve(ctx context.Context, nodeClass *v1.EC2NodeClass
 			reservationIDs           string
 			reservationType          v1.CapacityReservationType
 			reservationInterruptible bool
+			// blockDeviceMappingsHash discriminates instance types whose resolved BlockDeviceMappings
+			// (via BlockDeviceMappingOverrides) differ, since the mappings themselves aren't comparable
+			// (pointer slice) and can't be a map key directly.
+			blockDeviceMappingsHash string
 		}
 		// paramsForInstanceType computes the launch template grouping key for an instance type.
 		paramsForInstanceType := func(it *cloudprovider.InstanceType) (launchTemplateParams, error) {
@@ -256,6 +261,15 @@ func (r DefaultResolver) Resolve(ctx context.Context, nodeClass *v1.EC2NodeClass
 					fmt.Errorf("resolving systemReserved, %w", err),
 					"instance-type", it.Name)
 			}
+			// blockDeviceMappingsHash is computed from the same requirements the scheduler resolves
+			// ephemeral-storage capacity from (instancetype.NewInstanceType), so a launch template is
+			// only shared across instance types that also share the same resolved BlockDeviceMappings.
+			bdmHash, err := hashstructure.Hash(nodeClass.ResolveBlockDeviceMappings(it.Requirements), hashstructure.FormatV2, &hashstructure.HashOptions{SlicesAsSets: true})
+			if err != nil {
+				return launchTemplateParams{}, serrors.Wrap(
+					fmt.Errorf("hashing resolved blockDeviceMappings, %w", err),
+					"instance-type", it.Name)
+			}
 			return launchTemplateParams{
 				efaCount: lo.Ternary(
 					lo.Contains(lo.Keys(nodeClaim.Spec.Resources.Requests), v1.ResourceEFA),
@@ -271,6 +285,7 @@ func (r DefaultResolver) Resolve(ctx context.Context, nodeClass *v1.EC2NodeClass
 				reservationIDs:           strings.Join(reservationIDs, ","),
 				reservationType:          reservationType,
 				reservationInterruptible: reservationInterruptible,
+				blockDeviceMappingsHash:  fmt.Sprintf("%016x", bdmHash),
 			}, nil
 		}
 		paramsToInstanceTypes := map[launchTemplateParams][]*cloudprovider.InstanceType{}
@@ -284,7 +299,10 @@ func (r DefaultResolver) Resolve(ctx context.Context, nodeClass *v1.EC2NodeClass
 
 		for params, instanceTypes := range paramsToInstanceTypes {
 			reservationIDs := strings.Split(params.reservationIDs, ",")
-			resolvedTemplates = append(resolvedTemplates, r.resolveLaunchTemplates(nodeClass, nodeClaim, instanceTypes, capacityType, amiFamily, amiID, params.maxPods, params.efaCount, reservationIDs, params.reservationType, params.reservationInterruptible, options, tenancyType, placementGroupID, placementGroupPartition, deserializeResourceMap(params.resolvedKubeReserved), deserializeResourceMap(params.resolvedSystemReserved), parsedKubelet)...)
+			// Every instance type in this bucket resolved to the same blockDeviceMappingsHash, so any one
+			// of them resolves to the same BlockDeviceMappings for the whole bucket.
+			blockDeviceMappings := nodeClass.ResolveBlockDeviceMappings(instanceTypes[0].Requirements)
+			resolvedTemplates = append(resolvedTemplates, r.resolveLaunchTemplates(nodeClass, nodeClaim, instanceTypes, capacityType, amiFamily, amiID, params.maxPods, params.efaCount, reservationIDs, params.reservationType, params.reservationInterruptible, options, tenancyType, placementGroupID, placementGroupPartition, deserializeResourceMap(params.resolvedKubeReserved), deserializeResourceMap(params.resolvedSystemReserved), parsedKubelet, blockDeviceMappings)...)
 		}
 	}
 	return resolvedTemplates, nil
@@ -361,6 +379,7 @@ func (r DefaultResolver) resolveLaunchTemplates(
 	resolvedKubeReserved map[string]string,
 	resolvedSystemReserved map[string]string,
 	parsedKubelet *v1.ParsedKubeletConfig,
+	blockDeviceMappings []*v1.BlockDeviceMapping,
 ) []*LaunchTemplate {
 	// Copied rather than re-parsed because the fields below are mutated per launch template -- maxPods
 	// and the resolved reservations differ by instance type -- so each template needs its own copy.
@@ -444,7 +463,7 @@ func (r DefaultResolver) resolveLaunchTemplates(
 				nodeClass.Spec.UserData,
 				options.InstanceStorePolicy,
 			),
-			BlockDeviceMappings:              nodeClass.Spec.BlockDeviceMappings,
+			BlockDeviceMappings:              blockDeviceMappings,
 			MetadataOptions:                  nodeClass.Spec.MetadataOptions,
 			CPUOptions:                       nodeClass.Spec.CPUOptions,
 			DetailedMonitoring:               aws.ToBool(nodeClass.Spec.DetailedMonitoring),

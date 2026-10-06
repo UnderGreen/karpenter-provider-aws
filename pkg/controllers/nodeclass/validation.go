@@ -548,6 +548,9 @@ func getFleetLaunchTemplateConfig(
 // requirements of linked NodePools. If no NodePools exist for the given NodeClass, this function returns two default
 // instance types (one x86_64 and one arm64). If the 2 default instance types are not compatible with the NodeClass,
 // this function we'll use an instance type that could be selected with an open NodePool.
+// Note: the dry-run below only validates BlockDeviceMappingOverrides for instance types in this prioritized set. An
+// override targeting a family outside that set (e.g. one no linked NodePool can ever select) won't be dry-run
+// validated, matching today's behavior for the top-level blockDeviceMappings.
 func (v *Validation) getPrioritizedInstanceTypes(ctx context.Context, nodeClass *v1.EC2NodeClass, nodePools []*karpv1.NodePool) ([]*cloudprovider.InstanceType, error) {
 	// We should prioritize an InstanceType which will launch with a non-GPU (VariantStandard) AMI, since GPU
 	// AMIs may have a larger snapshot size than that supported by the NodeClass' blockDeviceMappings.
